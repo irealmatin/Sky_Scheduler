@@ -18,6 +18,18 @@ our system have these feature :
 """
 
 from AVL_Tree import AvlTree
+import logging
+from datetime import datetime
+import json
+
+logging.basicConfig(
+    filename=f'flight_system_{datetime.now().strftime("%Y%m%d")}.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
 
 class Flight:
     def __init__(self, flight_number, pilot_name, flight_time, passengers, origin, destination):
@@ -36,9 +48,18 @@ class Flight:
 class FlightManager:
     def __init__(self):
         self.flight_tree = AvlTree()
+        logger.info("Flight Manager initialized")
+
 
     def add_flight(self):
         flight_number = self.get_integer_input("Enter Flight Number: ")
+
+        #handel duplicate flight num
+        if self.flight_tree.search(self.flight_tree.root , flight_number):
+            logger.warning(f"Duplicate flight attempt: {flight_number}")
+            print("Error: Flight number already exists. please try again!")
+            return
+        
         pilot_name = self.get_string_input("Enter Pilot's name: ")
         flight_time = self.get_flight_time_input()
         passengers = self.get_integer_input("Enter Number of Passengers: ")
@@ -46,6 +67,7 @@ class FlightManager:
         destination = self.get_string_input("Enter Destination City: ")
         flight = Flight(flight_number, pilot_name, flight_time, passengers, origin, destination)
         self.flight_tree.insert(flight_number, flight)
+        logger.info(f"Added Flight {flight_number}: {flight}")
         print("Flight added successfully.")
 
     @staticmethod    
@@ -101,11 +123,15 @@ class FlightManager:
             if len(new_time) == 5 and new_time[2] == ':' and new_time[:2].isdigit() and new_time[3:].isdigit():
                 break
             print("Invalid time format. Please use HH:MM.")
-        node = self.flight_tree.search(self.flight_tree.root, flight_number)
+
+        node = self.flight_tree.search(self.flight_tree.root, flight_number)   
         if node:
+            old_time = node.value.flight_time
             node.value.flight_time = new_time
+            logger.info(f"Updated Flight {flight_number} time: {old_time} → {new_time}")
             print("Flight time updated successfully.")
         else:
+            logger.warning(f"Time change attempt for non-existent flight: {flight_number}")
             print("Flight not found.")
 
     def display_flights_to_same_destination(self): #handle no dest : Done!
@@ -137,8 +163,10 @@ class FlightManager:
         node = self.flight_tree.search(self.flight_tree.root, flight_number)
         if node:
             self.flight_tree.delete(flight_number)
+            logger.info(f"Deleted Flight {flight_number}")
             print("Flight deleted successfully.")
         else:
+            logger.warning(f"Delete attempt for non-existent flight: {flight_number}")
             print("Flight not found.")
 
     def get_specific_flight_info(self):
@@ -151,6 +179,32 @@ class FlightManager:
         else:
             print("Flight Not Found")
         
+
+    def save_to_file(self, filename='flights.json'):
+        flights = [
+            {
+                'flight_number': str(key),
+                'pilot_name': value.pilot_name,
+                'flight_time': value.flight_time,
+                'passengers': value.passengers,
+                'origin': value.origin,
+                'destination': value.destination
+            }
+            for key, value in self.flight_tree.inorder_traversal(self.flight_tree.root)
+        ]
+        with open(filename, 'w') as f:
+            json.dump(flights, f , indent=4)
+
+    def load_from_file(self, filename='flights.json'):
+        try:
+            with open(filename, 'r') as f:
+                flights = json.load(f)
+                for flight_data in flights:
+                    flight = Flight(**flight_data)
+                    self.flight_tree.insert(flight.flight_number, flight)
+        except FileNotFoundError:
+            print("No saved data found.")
+
 
 def print_menu():
     print("\n--------------------------Flight Management System--------------------------")
@@ -165,6 +219,7 @@ def print_menu():
 
 def main():
     flight_manager = FlightManager()
+    flight_manager.load_from_file()
     while True:
         print_menu()
         choice = input("Enter your choice: ")
@@ -184,6 +239,7 @@ def main():
             flight_manager.get_specific_flight_info()
         elif choice == '8':    
             print("Good Luck User!")
+            flight_manager.save_to_file()
             break
         else:
             print("Invalid choice. Please try again.")

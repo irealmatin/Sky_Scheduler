@@ -1,0 +1,18 @@
+[
+    {
+        "flight_number": "1",
+        "pilot_name": "ali ashrafi",
+        "flight_time": "10:00",
+        "passengers": 15,
+        "origin": "kahan",
+        "destination": "tehran"
+    },
+    {
+        "flight_number": "2",
+        "pilot_name": "matin mohamadi",
+        "flight_time": "15:24",
+        "passengers": 55,
+        "origin": "tehran",
+        "destination": "kish"
+    }
+]
